@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Prescripto — AI Health Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:        #f5f7fb;
+    --surface:   #ffffff;
+    --surface2:  #eef1f7;
+    --border:    #dde2ee;
+    --accent:    #1a6eff;
+    --accent2:   #00b89c;
+    --accent-glow: rgba(26,110,255,.12);
+    --txt:       #1a2236;
+    --txt-muted: #7b8fac;
+    --rx:        #e03e3e;
+    --rx-light:  rgba(224,62,62,.08);
+    --user-bg:   linear-gradient(135deg,#1c6aff,#0b48c4);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--txt);
+    height: 100dvh;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ── SIDEBAR ─────────────────────────────────── */
+  .sidebar {
+    width: 260px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    padding: 0 0 16px;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo-icon {
+    width: 38px; height: 38px;
+    background: linear-gradient(135deg,var(--accent),var(--accent2));
+    border-radius: 10px;
+    display: grid; place-items: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    box-shadow: 0 0 18px rgba(26,110,255,.2);
+  }
+
+  .logo-text h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.2rem;
+    letter-spacing: .02em;
+    background: linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+
+  .logo-text span {
+    font-size: .65rem;
+    color: var(--txt-muted);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+
+  .new-chat-btn {
+    margin: 16px 14px 0;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--txt);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .82rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+    transition: background .2s, border-color .2s;
+  }
+  .new-chat-btn:hover { background: var(--surface2); border-color: var(--accent); }
+  .new-chat-btn svg { color: var(--accent); flex-shrink: 0; }
+
+  .section-label {
+    padding: 20px 18px 8px;
+    font-size: .65rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--txt-muted);
+    font-weight: 600;
+  }
+
+  .history-list { flex: 1; overflow-y: auto; padding: 0 8px; }
+  .history-list::-webkit-scrollbar { width: 4px; }
+  .history-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .hist-item {
+    padding: 9px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: .82rem;
+    color: var(--txt-muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    display: flex; align-items: center; gap: 8px;
+    transition: background .15s, color .15s;
+  }
+  .hist-item:hover { background: var(--surface2); color: var(--txt); }
+  .hist-item.active { background: var(--accent-glow); color: var(--accent); }
+  .hist-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+  .hist-item.active .hist-dot { background: var(--accent); }
+
+  .sidebar-footer {
+    padding: 14px 14px 0;
+    border-top: 1px solid var(--border);
+  }
+  .profile-pill {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .profile-pill:hover { background: var(--surface2); }
+  .avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg,#2456c8,#1a3a94);
+    display: grid; place-items: center;
+    font-size: .75rem; font-weight: 600;
+    color: #c8d8ff;
+    flex-shrink: 0;
+  }
+  .profile-info { flex: 1; overflow: hidden; }
+  .profile-info strong {
+    display: block; font-size: .82rem; font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .profile-info small { font-size: .7rem; color: var(--txt-muted); }
+
+  /* ── MAIN ─────────────────────────────────────── */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: var(--bg);
+  }
+
+  /* top bar */
+  .topbar {
+    height: 56px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 24px;
+    gap: 12px;
+    flex-shrink: 0;
+    background: rgba(255,255,255,.85);
+    backdrop-filter: blur(12px);
+  }
+
+  .model-badge {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: .75rem; font-weight: 500;
+    cursor: pointer;
+    transition: border-color .2s;
+  }
+  .model-badge:hover { border-color: var(--accent); }
+  .model-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent2);
+    box-shadow: 0 0 8px var(--accent2); }
+
+  .topbar-right { margin-left: auto; display: flex; gap: 8px; }
+
+  .icon-btn {
+    width: 34px; height: 34px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    display: grid; place-items: center;
+    color: var(--txt-muted);
+    transition: all .2s;
+  }
+  .icon-btn:hover { background: var(--surface2); color: var(--txt); border-color: var(--accent); }
+
+  /* chat area */
+  .chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .chat-area::-webkit-scrollbar { width: 5px; }
+  .chat-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+
+  /* welcome */
+  .welcome {
+    text-align: center;
+    padding: 48px 16px 24px;
+    animation: fadeUp .5s ease both;
+  }
+  .welcome-icon {
+    width: 68px; height: 68px;
+    background: linear-gradient(135deg,var(--accent),var(--accent2));
+    border-radius: 20px;
+    display: grid; place-items: center;
+    font-size: 32px;
+    margin: 0 auto 20px;
+    box-shadow: 0 0 30px rgba(26,110,255,.15);
+  }
+  .welcome h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2rem;
+    margin-bottom: 8px;
+    background: linear-gradient(120deg,#1a2236,#4a5568);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .welcome p { color: var(--txt-muted); font-size: .9rem; line-height: 1.6; max-width: 420px; margin: 0 auto 28px; }
+
+  .suggestion-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+  .suggestion {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+    text-align: left;
+    transition: all .2s;
+    animation: fadeUp .5s ease both;
+  }
+  .suggestion:nth-child(1) { animation-delay: .1s; }
+  .suggestion:nth-child(2) { animation-delay: .15s; }
+  .suggestion:nth-child(3) { animation-delay: .2s; }
+  .suggestion:nth-child(4) { animation-delay: .25s; }
+  .suggestion:hover {
+    background: var(--surface2);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px var(--accent-glow);
+  }
+  .suggestion-icon { font-size: 1.2rem; margin-bottom: 6px; }
+  .suggestion p { font-size: .8rem; color: var(--txt-muted); font-weight: 400; line-height: 1.4; }
+  .suggestion strong { font-size: .85rem; display: block; margin-bottom: 2px; }
+
+  /* messages */
+  .message-row {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    animation: fadeUp .35s ease both;
+  }
+  .message-row.user { flex-direction: row-reverse; }
+
+  .msg-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: .8rem; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .msg-avatar.bot {
+    background: linear-gradient(135deg,var(--accent),var(--accent2));
+    color: #fff;
+    box-shadow: 0 0 10px rgba(26,110,255,.15);
+  }
+  .msg-avatar.user {
+    background: linear-gradient(135deg,#2456c8,#1a3a94);
+    color: #c8d8ff;
+  }
+
+  .msg-bubble {
+    max-width: 62%;
+    line-height: 1.65;
+    font-size: .875rem;
+  }
+  .message-row.user .msg-bubble {
+    background: var(--user-bg);
+    color: #e8f0fe;
+    padding: 12px 16px;
+    border-radius: 18px 4px 18px 18px;
+  }
+  .message-row.bot .msg-bubble {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 14px 16px;
+    border-radius: 4px 18px 18px 18px;
+  }
+
+  /* rx card */
+  .rx-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--rx);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-top: 10px;
+    font-size: .82rem;
+  }
+  .rx-header {
+    display: flex; align-items: center; gap: 6px;
+    font-weight: 600; font-size: .78rem;
+    letter-spacing: .08em; text-transform: uppercase;
+    color: var(--rx); margin-bottom: 8px;
+  }
+  .rx-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--txt-muted);
+  }
+  .rx-row:last-child { border: none; }
+  .rx-row strong { color: var(--txt); }
+
+  .disclaimer {
+    background: rgba(224,62,62,.06);
+    border: 1px solid rgba(224,62,62,.25);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: .75rem;
+    color: #c0392b;
+    margin-top: 10px;
+    display: flex; gap: 6px; align-items: flex-start;
+  }
+
+  .msg-time { font-size: .68rem; color: var(--txt-muted); margin-top: 4px; text-align: right; }
+  .message-row.bot .msg-time { text-align: left; }
+
+  /* typing */
+  .typing-indicator {
+    display: flex; gap: 5px; padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px 18px 18px 18px;
+    width: fit-content;
+  }
+  .typing-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--txt-muted);
+    animation: blink 1.2s infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay: .2s; }
+  .typing-dot:nth-child(3) { animation-delay: .4s; }
+
+  /* input area */
+  .input-area {
+    padding: 14px 24px 20px;
+    border-top: 1px solid var(--border);
+    background: rgba(255,255,255,.9);
+    backdrop-filter: blur(12px);
+    flex-shrink: 0;
+  }
+
+  .input-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    padding: 10px 12px;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .input-box:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  .chat-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--txt);
+    font-family: 'DM Sans', sans-serif;
+    font-size: .875rem;
+    resize: none;
+    max-height: 120px;
+    line-height: 1.5;
+    padding: 2px 0;
+  }
+  .chat-input::placeholder { color: var(--txt-muted); }
+
+  .input-actions { display: flex; gap: 6px; align-items: center; }
+
+  .attach-btn {
+    width: 32px; height: 32px;
+    background: transparent; border: none;
+    cursor: pointer; color: var(--txt-muted);
+    border-radius: 8px;
+    display: grid; place-items: center;
+    transition: color .2s, background .2s;
+  }
+  .attach-btn:hover { color: var(--accent); background: var(--surface2); }
+
+  .send-btn {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg,var(--accent),#1a6ee0);
+    border: none;
+    cursor: pointer;
+    display: grid; place-items: center;
+    transition: all .2s;
+    box-shadow: 0 0 10px rgba(26,110,255,.2);
+    flex-shrink: 0;
+  }
+  .send-btn:hover {
+    transform: scale(1.07);
+    box-shadow: 0 0 16px rgba(26,110,255,.35);
+  }
+  .send-btn:active { transform: scale(.95); }
+
+  .input-hint {
+    font-size: .7rem;
+    color: var(--txt-muted);
+    text-align: center;
+    margin-top: 8px;
+  }
+
+  /* tags */
+  .tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .tag {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: .72rem;
+    color: var(--txt-muted);
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .tag:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  /* animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes blink {
+    0%,60%,100% { opacity: .25; transform: scale(.8); }
+    30%          { opacity: 1;   transform: scale(1.2); }
+  }
+
+  /* scrollbar global */
+  * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+</style>
+</head>
+<body>
+
+<!-- ── SIDEBAR ──────────────────────────────── -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">⚕️</div>
+    <div class="logo-text">
+      <h1>Prescripto</h1>
+      <span>AI Health Assistant</span>
+    </div>
+  </div>
+
+  <button class="new-chat-btn">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    New Consultation
+  </button>
+
+  <div class="section-label">Recent</div>
+
+  <div class="history-list">
+    <div class="hist-item active">
+      <span class="hist-dot"></span> Headache & dizziness symptoms
+    </div>
+    <div class="hist-item">
+      <span class="hist-dot"></span> Medication interaction check
+    </div>
+    <div class="hist-item">
+      <span class="hist-dot"></span> Cold & flu remedies
+    </div>
+    <div class="hist-item">
+      <span class="hist-dot"></span> Blood pressure questions
+    </div>
+    <div class="hist-item">
+      <span class="hist-dot"></span> Antibiotic dosage guidance
+    </div>
+    <div class="hist-item">
+      <span class="hist-dot"></span> Sleep disorder help
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="profile-pill">
+      <div class="avatar">JD</div>
+      <div class="profile-info">
+        <strong>John Doe</strong>
+        <small>Free Plan</small>
+      </div>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7b8fac" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    </div>
+  </div>
+</aside>
+
+<!-- ── MAIN ──────────────────────────────────── -->
+<main class="main">
+
+  <!-- top bar -->
+  <header class="topbar">
+    <div class="model-badge">
+      <span class="model-dot"></span>
+      Prescripto v2 · Medical AI
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-left:2px"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="topbar-right">
+      <button class="icon-btn" title="Search history">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+      <button class="icon-btn" title="Share">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      </button>
+      <button class="icon-btn" title="More">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- chat -->
+  <div class="chat-area" id="chatArea">
+
+    <!-- welcome state -->
+    <div class="welcome" id="welcome">
+      <div class="welcome-icon">⚕️</div>
+      <h2>Hello, I'm Prescripto</h2>
+      <p>Your intelligent health assistant. Describe your symptoms, ask about medications, or get general wellness guidance — I'm here to help.</p>
+
+      <div class="suggestion-grid">
+        <div class="suggestion" onclick="sendSuggestion(this)">
+          <div class="suggestion-icon">🤒</div>
+          <strong>Symptom Checker</strong>
+          <p>Describe how you feel and get possible causes</p>
+        </div>
+        <div class="suggestion" onclick="sendSuggestion(this)">
+          <div class="suggestion-icon">💊</div>
+          <strong>Medication Guide</strong>
+          <p>Dosages, interactions, and side effects</p>
+        </div>
+        <div class="suggestion" onclick="sendSuggestion(this)">
+          <div class="suggestion-icon">🧪</div>
+          <strong>Lab Results</strong>
+          <p>Understand your blood work or test results</p>
+        </div>
+        <div class="suggestion" onclick="sendSuggestion(this)">
+          <div class="suggestion-icon">🌿</div>
+          <strong>Wellness Tips</strong>
+          <p>Lifestyle, nutrition, and preventive care</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- sample conversation -->
+    <div class="message-row user" style="animation-delay:.05s">
+      <div class="msg-avatar user">JD</div>
+      <div>
+        <div class="msg-bubble">I've been having a persistent headache for 3 days, mild fever around 99.5°F, and some stiffness in my neck. Should I be concerned?</div>
+        <div class="msg-time">10:32 AM</div>
+      </div>
+    </div>
+
+    <div class="message-row bot" style="animation-delay:.1s">
+      <div class="msg-avatar bot">Rx</div>
+      <div>
+        <div class="msg-bubble">
+          The combination of symptoms you've described — <strong>persistent headache, low-grade fever, and neck stiffness</strong> — warrants prompt medical evaluation. While these can have benign causes like tension headache or mild viral illness, together they can sometimes indicate conditions that require professional assessment.
+
+          <div class="rx-card">
+            <div class="rx-header">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>
+              Possible Causes
+            </div>
+            <div class="rx-row">🔵 <strong>Tension-type headache</strong> — <span>Most common; usually stress/posture-related</span></div>
+            <div class="rx-row">🟡 <strong>Viral illness</strong> — <span>Flu or respiratory infection with muscular tension</span></div>
+            <div class="rx-row">🔴 <strong>Meningeal irritation</strong> — <span>Rare but serious; requires urgent evaluation</span></div>
+          </div>
+
+          <div class="disclaimer">
+            ⚠️ The neck stiffness combined with fever is a symptom pattern your doctor should evaluate in person — please seek medical care within the next few hours if symptoms worsen.
+          </div>
+        </div>
+        <div class="tag-row">
+          <span class="tag">What pain relievers can I take?</span>
+          <span class="tag">When to go to the ER?</span>
+          <span class="tag">Home care tips</span>
+        </div>
+        <div class="msg-time">10:32 AM</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- input -->
+  <div class="input-area">
+    <div class="input-box">
+      <button class="attach-btn" title="Attach file">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+      </button>
+      <textarea
+        id="chatInput"
+        class="chat-input"
+        placeholder="Describe your symptoms or ask a health question…"
+        rows="1"
+        onkeydown="handleKey(event)"
+        oninput="autoResize(this)"
+      ></textarea>
+      <div class="input-actions">
+        <button class="attach-btn" title="Voice input">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        </button>
+        <button class="send-btn" onclick="sendMessage()" title="Send">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="input-hint">Prescripto provides health information only — not a substitute for professional medical advice.</div>
+  </div>
+
+</main>
+
+<script>
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function now() {
+    return new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  }
+
+  function appendUserMessage(text) {
+    const area = document.getElementById('chatArea');
+    const row = document.createElement('div');
+    row.className = 'message-row user';
+    row.innerHTML = `
+      <div class="msg-avatar user">JD</div>
+      <div>
+        <div class="msg-bubble">${escHtml(text)}</div>
+        <div class="msg-time">${now()}</div>
+      </div>`;
+    area.appendChild(row);
+    area.scrollTop = area.scrollHeight;
+  }
+
+  function appendBotMessage(text) {
+    const area = document.getElementById('chatArea');
+    const row = document.createElement('div');
+    row.className = 'message-row bot';
+    row.innerHTML = `
+      <div class="msg-avatar bot">Rx</div>
+      <div>
+        <div class="msg-bubble">${escHtml(text)}</div>
+        <div class="msg-time">${now()}</div>
+      </div>`;
+    area.appendChild(row);
+    area.scrollTop = area.scrollHeight;
+  }
+
+  function appendErrorMessage(msg) {
+    const area = document.getElementById('chatArea');
+    const row = document.createElement('div');
+    row.className = 'message-row bot';
+    row.innerHTML = `
+      <div class="msg-avatar bot">Rx</div>
+      <div>
+        <div class="msg-bubble">
+          <div class="disclaimer">⚠️ ${escHtml(msg)}</div>
+        </div>
+        <div class="msg-time">${now()}</div>
+      </div>`;
+    area.appendChild(row);
+    area.scrollTop = area.scrollHeight;
+  }
+
+  let typingEl = null;
+  function showTyping() {
+    const area = document.getElementById('chatArea');
+    const row = document.createElement('div');
+    row.className = 'message-row bot';
+    row.id = 'typing';
+    row.innerHTML = `
+      <div class="msg-avatar bot">Rx</div>
+      <div class="typing-indicator">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>`;
+    area.appendChild(row);
+    area.scrollTop = area.scrollHeight;
+    typingEl = row;
+  }
+
+  function removeTyping() {
+    if (typingEl) { typingEl.remove(); typingEl = null; }
+  }
+
+  async function askFlask(msg) {
+    const formData = new FormData();
+    formData.append('msg', msg);
+    const response = await fetch('/get', {
+      method: 'POST',
+      body: formData
+    });
+    if (!response.ok) throw new Error(`Server error: ${response.status}`);
+    return await response.text();
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+
+    const welcome = document.getElementById('welcome');
+    if (welcome) welcome.remove();
+
+    appendUserMessage(text);
+    input.value = '';
+    input.style.height = 'auto';
+
+    showTyping();
+    try {
+      const answer = await askFlask(text);
+      removeTyping();
+      appendBotMessage(answer);
+    } catch (err) {
+      removeTyping();
+      appendErrorMessage('Could not reach the server. Make sure Flask is running on port 8080.');
+      console.error(err);
+    }
+  }
+
+  async function sendSuggestion(el) {
+    const title = el.querySelector('strong').textContent;
+    const welcome = document.getElementById('welcome');
+    if (welcome) welcome.remove();
+
+    appendUserMessage('Tell me about: ' + title);
+    showTyping();
+    try {
+      const answer = await askFlask('Tell me about: ' + title);
+      removeTyping();
+      appendBotMessage(answer);
+    } catch (err) {
+      removeTyping();
+      appendErrorMessage('Could not reach the server. Make sure Flask is running on port 8080.');
+    }
+  }
+</script>
+</body>
+</html>
