@@ -5,7 +5,6 @@ system_prompt=(
     "don't know. use 3 sentences max and keep the"
     "answer consise"
     "don't say anything more than only possible diseases"
-    "if patient themselves know the diesease then tell them to take care"
     "\n\n"
     "{context}"
 )
